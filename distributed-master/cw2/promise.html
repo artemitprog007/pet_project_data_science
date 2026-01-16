@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Promise Practice</title>
+</head>
+<body>
+    <div class="container">
+        <h1>Практика с Promise</h1>
+        
+        <button class="button success" id="successBtn">Успешный Promise</button>
+        <button class="button error" id="errorBtn">Promise с ошибкой</button>
+        <button class="button info" id="sequenceBtn">Цепочка Promise</button>
+        
+        <div class="log" id="log"></div>
+    </div>
+
+    <script>
+        const log = document.getElementById('log');
+        
+        function addLog(message, type = 'info') {
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.style.borderLeftColor = type === 'error' ? '#f44336' : 
+                                        type === 'success' ? '#4CAF50' : '#2196F3';
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
+        }
+
+        function createSuccessPromise() {
+            addLog('Запускаю промис...');
+            
+            return new Promise((resolve, reject) => {
+                addLog('Идет загрузка...');
+                
+                setTimeout(() => {
+                    const result = 'Все готово, данные получены!';
+                    addLog('Загрузка завершена');
+                    resolve(result);
+                }, 2000);
+            });
+        }
+
+        function createErrorPromise() {
+            addLog('Пробую загрузить данные...');
+            
+            return new Promise((resolve, reject) => {
+                setTimeout(() => {
+                    const error = new Error('Упс, что-то пошло не так');
+                    addLog('Произошла ошибка');
+                    reject(error);
+                }, 2000);
+            });
+        }
+
+        document.getElementById('successBtn').addEventListener('click', function() {
+            addLog('--- ТЕСТ УСПЕШНОЙ ЗАГРУЗКИ ---');
+            
+            createSuccessPromise()
+                .then(result => {
+                    addLog(`then: ${result}`, 'success');
+                })
+                .catch(error => {
+                    addLog(`catch: ${error.message}`, 'error');
+                })
+                .finally(() => {
+                    addLog('finally: Готово, можно продолжать');
+                });
+        });
+
+        document.getElementById('errorBtn').addEventListener('click', function() {
+            addLog('--- ТЕСТ С ОШИБКОЙ ---');
+            
+            createErrorPromise()
+                .then(result => {
+                    addLog(`then: ${result}`, 'success');
+                })
+                .catch(error => {
+                    addLog(`catch: ${error.message}`, 'error');
+                })
+                .finally(() => {
+                    addLog('finally: Готово, можно продолжать');
+                });
+        });
+
+        document.getElementById('sequenceBtn').addEventListener('click', function() {
+            addLog('--- ПОСЛЕДОВАТЕЛЬНАЯ ЗАГРУЗКА ---');
+            
+            new Promise((resolve, reject) => {
+                setTimeout(() => {
+                    addLog('Шаг 1: Ищу пользователя...');
+                    resolve(123);
+                }, 1000);
+            })
+            .then(userId => {
+                addLog(`Шаг 2: Нашел пользователя с ID ${userId}, загружаю профиль...`);
+                return new Promise(resolve => {
+                    setTimeout(() => {
+                        resolve({ userId, name: 'Иван Иванов', email: 'ivan@example.com' });
+                    }, 1000);
+                });
+            })
+            .then(userData => {
+                addLog(`Шаг 3: Профиль загружен: ${userData.name}`);
+                addLog(`Шаг 4: Теперь смотрю его заказы...`);
+                return new Promise(resolve => {
+                    setTimeout(() => {
+                        resolve({
+                            ...userData,
+                            orders: ['Заказ #1', 'Заказ #2', 'Заказ #3']
+                        });
+                    }, 1000);
+                });
+            })
+            .then(finalData => {
+                addLog(`Найдено:`, 'success');
+                addLog(`   Имя: ${finalData.name}`);
+                addLog(`   Почта: ${finalData.email}`);
+                addLog(`   Заказы: ${finalData.orders.join(', ')}`);
+            })
+            .catch(error => {
+                addLog(`Не получилось загрузить: ${error.message}`, 'error');
+            });
+        });
+    </script>
+</body>
+</html>

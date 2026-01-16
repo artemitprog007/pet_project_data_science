@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>GitHub User Search</title>
+</head>
+<body>
+    <div class="container">
+        <h1>Поиск пользователей GitHub</h1>
+        
+        <div class="search-container">
+            <input type="text" id="usernameInput" placeholder="Введите username GitHub...">
+            <button id="searchBtn">Найти</button>
+        </div>
+        
+        <div id="userInfo"></div>
+        <div class="log" id="log4"></div>
+    </div>
+
+    <script>
+        const usernameInput = document.getElementById('usernameInput');
+        const searchBtn = document.getElementById('searchBtn');
+        const userInfo = document.getElementById('userInfo');
+        const log4 = document.getElementById('log4');
+
+        function addLog4(message, type = 'info') {
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.style.borderLeftColor = type === 'error' ? '#f44336' : 
+                                        type === 'success' ? '#4CAF50' : '#2196F3';
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            log4.appendChild(entry);
+        }
+
+        async function searchGitHubUser(username) {
+            if (!username.trim()) {
+                throw new Error('Введите username для поиска');
+            }
+
+            addLog4(`Поиск пользователя: ${username}`);
+            userInfo.innerHTML = '<div class="loading">Поиск пользователя...</div>';
+
+            try {
+                const userResponse = await fetch(`https://api.github.com/users/${username}`);
+                
+                if (!userResponse.ok) {
+                    if (userResponse.status === 404) {
+                        throw new Error('Пользователь не найден');
+                    }
+                    throw new Error(`Ошибка API: ${userResponse.status}`);
+                }
+
+                const userData = await userResponse.json();
+                addLog4(`Пользователь найден: ${userData.name || userData.login}`, 'success');
+
+                addLog4('Загрузка репозиториев...');
+                const reposResponse = await fetch(userData.repos_url);
+                const reposData = await reposResponse.json();
+
+                addLog4(`Загружено репозиториев: ${reposData.length}`, 'success');
+
+                userInfo.innerHTML = `
+                    <div class="user-card">
+                        <img src="${userData.avatar_url}" alt="Avatar" class="avatar">
+                        <h2>${userData.name || userData.login}</h2>
+                        <p>${userData.bio || 'Нет описания'}</p>
+                        <p><strong>Локация:</strong> ${userData.location || 'Не указана'}</p>
+                        <p><strong>Подписчики:</strong> ${userData.followers}</p>
+                        <p><strong>Репозитории:</strong> ${userData.public_repos}</p>
+                        <p><strong>GitHub:</strong> <a href="${userData.html_url}" target="_blank">${userData.html_url}</a></p>
+                        
+                        <h3>Последние репозитории:</h3>
+                        ${reposData.slice(0, 5).map(repo => `
+                            <div class="repo">
+                                <a href="${repo.html_url}" target="_blank">${repo.name}</a>
+                                <br>
+                                <small>Звезд: ${repo.stargazers_count} | Форков: ${repo.forks_count}</small>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+
+            } catch (error) {
+                addLog4(`Ошибка: ${error.message}`, 'error');
+                userInfo.innerHTML = `
+                    <div class="user-card error">
+                        <h3>Ошибка поиска</h3>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        searchBtn.addEventListener('click', async function() {
+            await searchGitHubUser(usernameInput.value);
+        });
+
+        usernameInput.addEventListener('keypress', async function(event) {
+            if (event.key === 'Enter') {
+                await searchGitHubUser(usernameInput.value);
+            }
+        });
+
+        addLog4('Приложение готово к работе! Введите username GitHub для поиска.');
+    </script>
+</body>
+</html>
